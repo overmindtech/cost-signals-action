@@ -6,10 +6,12 @@
     <p>
     <a href="https://overmind.tech">https://overmind.tech</a>
   </p>
+
+# Overmind Cost Signals Action
   
 </div>
 
-# Overmind Cost Signals Action
+
 
   <p>
     Analyze infrastructure cost changes with Infracost and submit them as Overmind Custom Signals for enhanced financial risk visibility - all in parallel with your terraform analysis.
