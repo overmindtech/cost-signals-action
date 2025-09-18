@@ -1,0 +1,448 @@
+name: 'Overmind Cost Signals'
+description: 'Analyze cost impact with Infracost and submit as Overmind signals'
+author: 'Overmind'
+
+branding:
+  icon: 'dollar-sign'
+  color: 'green'
+
+inputs:
+  overmind-api-key:
+    description: 'Overmind API key for submitting cost signals'
+    required: true
+
+  overmind-url:
+    description: 'Overmind API base URL'
+    required: false
+    default: 'https://api.overmind.tech'
+
+  infracost-api-key:
+    description: 'Infracost API key (will attempt to use existing credentials if not provided)'
+    required: false
+    default: ''
+
+  terraform-plan-json:
+    description: 'Path to terraform plan JSON file (if not provided, will look for tfplan.json)'
+    required: false
+    default: ''
+
+  terraform-directory:
+    description: 'Directory containing Terraform files to analyze'
+    required: false
+    default: '.'
+
+  baseline-path:
+    description: 'Path to baseline cost JSON for comparison (optional)'
+    required: false
+    default: ''
+
+  threshold-percentage:
+    description: 'Percentage change threshold to trigger warnings (default: 20%)'
+    required: false
+    default: '20'
+
+  threshold-absolute:
+    description: 'Absolute dollar change threshold to trigger warnings (default: $500)'
+    required: false
+    default: '500'
+
+  currency:
+    description: 'Currency for cost display (USD, EUR, GBP, etc.)'
+    required: false
+    default: 'USD'
+
+  signal-source:
+    description: 'Source identifier for the cost signal (typically repository name)'
+    required: false
+    default: ''
+
+  signal-category:
+    description: 'Category for grouping cost signals'
+    required: false
+    default: 'infrastructure'
+
+  skip-install:
+    description: 'Skip Infracost installation (useful if already installed)'
+    required: false
+    default: 'false'
+
+  debug:
+    description: 'Enable debug logging'
+    required: false
+    default: 'false'
+
+  fail-on-threshold:
+    description: 'Fail the action if cost increase exceeds thresholds'
+    required: false
+    default: 'false'
+
+  submit-on-decreases:
+    description: 'Submit signals for cost decreases (some teams only care about increases)'
+    required: false
+    default: 'true'
+
+  infracost-version:
+    description: 'Version of Infracost to install'
+    required: false
+    default: 'latest'
+    
+  overmind-cli-version:
+    description: 'Version of Overmind CLI to install'
+    required: false
+    default: 'latest'
+
+outputs:
+  cost-change:
+    description: 'Monthly cost change amount'
+    value: ${{ steps.analyze.outputs.cost-change }}
+
+  cost-percentage:
+    description: 'Percentage cost change'
+    value: ${{ steps.analyze.outputs.cost-percentage }}
+
+  signal-value:
+    description: 'Generated signal value (-4 to +3)'
+    value: ${{ steps.analyze.outputs.signal-value }}
+
+  signal-submitted:
+    description: 'Whether signal was successfully submitted'
+    value: ${{ steps.analyze.outputs.signal-submitted }}
+
+  total-resources:
+    description: 'Total number of resources analyzed'
+    value: ${{ steps.analyze.outputs.total-resources }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [[ -z "${{ inputs.overmind-api-key }}" ]]; then
+          echo "Error: overmind-api-key is required"
+          exit 1
+        fi
+        
+        if [[ "${{ inputs.debug }}" == "true" ]]; then
+          echo "Debug mode enabled"
+          set -x
+        fi
+
+    - name: Install Infracost
+      if: inputs.skip-install != 'true'
+      shell: bash
+      run: |
+        echo "Installing Infracost..."
+        
+        # Detect OS and architecture
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+        
+        case $OS in
+          linux*) OS="linux" ;;
+          darwin*) OS="darwin" ;;
+          *) echo "Unsupported OS: $OS"; exit 1 ;;
+        esac
+        
+        case $ARCH in
+          x86_64|amd64) ARCH="amd64" ;;
+          arm64|aarch64) ARCH="arm64" ;;
+          *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+        esac
+        
+        # Check if already installed
+        if command -v infracost &> /dev/null; then
+          echo "Infracost already installed: $(infracost --version)"
+        else
+          # Install Infracost
+          if [[ "${{ inputs.infracost-version }}" == "latest" ]]; then
+            VERSION="v0.10.42"
+          else
+            VERSION="${{ inputs.infracost-version }}"
+          fi
+          
+          DOWNLOAD_URL="https://github.com/infracost/infracost/releases/download/${VERSION}/infracost-${OS}-${ARCH}.tar.gz"
+          
+          echo "Downloading Infracost from: $DOWNLOAD_URL"
+          curl -fsSL "$DOWNLOAD_URL" | tar -xz -C /tmp
+          
+          # Find and install binary
+          if [[ -f "/tmp/infracost" ]]; then
+            sudo mv /tmp/infracost /usr/local/bin/infracost
+          else
+            BINARY_PATH=$(find /tmp -name "infracost" -type f | head -1)
+            sudo mv "$BINARY_PATH" /usr/local/bin/infracost
+          fi
+          
+          chmod +x /usr/local/bin/infracost
+          echo "Infracost installed: $(infracost --version)"
+        fi
+        
+        # Configure API key
+        if [[ -n "${{ inputs.infracost-api-key }}" ]]; then
+          infracost configure set api_key "${{ inputs.infracost-api-key }}"
+        fi
+      env:
+        INFRACOST_API_KEY: ${{ inputs.infracost-api-key }}
+
+    - name: Install Overmind CLI
+      shell: bash
+      run: |
+        echo "Installing Overmind CLI..."
+        
+        # Detect OS and architecture
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+        
+        case $OS in
+          linux*) OS="linux" ;;
+          darwin*) OS="darwin" ;;
+          *) echo "Unsupported OS: $OS"; exit 1 ;;
+        esac
+        
+        case $ARCH in
+          x86_64|amd64) ARCH="amd64" ;;
+          arm64|aarch64) ARCH="arm64" ;;
+          *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+        esac
+        
+        # Check if already installed
+        if command -v overmind &> /dev/null; then
+          echo "Overmind CLI already installed: $(overmind version 2>/dev/null || echo 'unknown')"
+        else
+          # Install Overmind CLI
+          if [[ "${{ inputs.overmind-cli-version }}" == "latest" ]]; then
+            # Get latest version from GitHub API
+            VERSION=$(curl -s https://api.github.com/repos/overmindtech/cli/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+          else
+            VERSION="${{ inputs.overmind-cli-version }}"
+          fi
+          
+          DOWNLOAD_URL="https://github.com/overmindtech/cli/releases/download/${VERSION}/overmind_${VERSION#v}_${OS}_${ARCH}.tar.gz"
+          
+          echo "Downloading Overmind CLI from: $DOWNLOAD_URL"
+          curl -fsSL "$DOWNLOAD_URL" | tar -xz -C /tmp
+          
+          # Install binary
+          sudo mv /tmp/overmind /usr/local/bin/overmind
+          chmod +x /usr/local/bin/overmind
+          echo "Overmind CLI installed: $(overmind version 2>/dev/null || echo 'installed')"
+        fi
+
+    - name: Analyze and Submit Cost Signal
+      id: analyze
+      shell: bash
+      run: |
+        echo "Starting cost analysis..."
+        
+        # Determine plan path
+        PLAN_PATH="${{ inputs.terraform-plan-json }}"
+        if [[ -z "$PLAN_PATH" ]]; then
+          # Look for existing tfplan.json or generate one
+          if [[ -f "tfplan.json" ]]; then
+            PLAN_PATH="tfplan.json"
+          else
+            echo "No plan path specified - generating from Terraform directory"
+            cd "${{ inputs.terraform-directory }}"
+            
+            if [[ ! -d ".terraform" ]]; then
+              terraform init
+            fi
+            
+            terraform plan -out=tfplan
+            terraform show -json tfplan > tfplan.json
+            PLAN_PATH="${{ inputs.terraform-directory }}/tfplan.json"
+          fi
+        fi
+        
+        echo "Using Terraform plan: $PLAN_PATH"
+        
+        # Run Infracost
+        infracost breakdown --path "$PLAN_PATH" --format json > cost.json
+        
+        # Parse results
+        CURRENT=$(jq -r '.totalMonthlyCost // 0' cost.json)
+        PREVIOUS=$(jq -r '.pastTotalMonthlyCost // 0' cost.json)
+        DELTA=$(jq -r '.diffTotalMonthlyCost // 0' cost.json)
+        
+        echo "Current: $CURRENT, Previous: $PREVIOUS, Delta: $DELTA"
+        
+        # Note: Using bc for mathematical calculations (available on GitHub Actions runners)
+        
+        # Skip if no change
+        if [ "$DELTA" == "0" ]; then
+          echo "No cost changes detected"
+          echo "signal-submitted=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Calculate percentage and severity
+        if (( $(echo "$PREVIOUS > 0" | bc -l) )); then
+          PERCENTAGE=$(echo "scale=1; ($DELTA * 100) / $PREVIOUS" | bc -l)
+        elif (( $(echo "$CURRENT > 0" | bc -l) )); then
+          PERCENTAGE="100.0"  # New infrastructure
+        else
+          PERCENTAGE="0.0"
+        fi
+        
+        ABS_PERCENTAGE=$(echo "$PERCENTAGE" | tr -d '-')
+        
+        # Skip if change is under threshold
+        if (( $(echo "$ABS_PERCENTAGE < 5" | bc -l) )); then
+          echo "Change under 5% threshold - no signal submitted"
+          echo "signal-submitted=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Check if we should skip cost decreases
+        if (( $(echo "$DELTA < 0" | bc -l) )) && [[ "${{ inputs.submit-on-decreases }}" != "true" ]]; then
+          echo "Cost decrease detected but submit-on-decreases is disabled - no signal submitted"
+          echo "signal-submitted=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Calculate severity on -4 to +3 scale
+        if (( $(echo "$DELTA > 0" | bc -l) )); then
+          # Cost increases (negative values)
+          if (( $(echo "$ABS_PERCENTAGE > 100" | bc -l) )); then
+            SEVERITY=-4  # Critical increase
+          elif (( $(echo "$ABS_PERCENTAGE >= 50" | bc -l) )); then
+            SEVERITY=-3  # High increase
+          elif (( $(echo "$ABS_PERCENTAGE >= 20" | bc -l) )); then
+            SEVERITY=-2  # Moderate increase
+          else
+            SEVERITY=-1  # Minor increase
+          fi
+        else
+          # Cost decreases (positive values)
+          if (( $(echo "$ABS_PERCENTAGE >= 50" | bc -l) )); then
+            SEVERITY=3   # Significant reduction
+          elif (( $(echo "$ABS_PERCENTAGE >= 20" | bc -l) )); then
+            SEVERITY=2   # Moderate reduction
+          else
+            SEVERITY=1   # Minor reduction
+          fi
+        fi
+        
+        # Build description with top changes
+        TOP_CHANGES=$(jq -r '[.projects[].breakdown.resources[] | 
+          select(.costDiff.monthly != null and .costDiff.monthly != 0) | 
+          {name: .name, delta: .costDiff.monthly}] | 
+          sort_by(-.delta) | 
+          .[0:3] | 
+          map("\(.name) ($\(.delta))") | 
+          join(", ")' cost.json)
+        
+        TOTAL_RESOURCES=$(jq -r '.summary.totalDetectedResources // 0' cost.json)
+        
+        # Format delta without negative sign for display
+        DISPLAY_DELTA=$(echo "$DELTA" | tr -d '-')
+        
+        if (( $(echo "$DELTA > 0" | bc -l) )); then
+          DIRECTION="increases"
+        else
+          DIRECTION="decreases"
+        fi
+        
+        DESCRIPTION="Monthly cost ${DIRECTION} by \$${DISPLAY_DELTA} (${PERCENTAGE}%) from \$${PREVIOUS} to \$${CURRENT} ${{ inputs.currency }}."
+        
+        if [[ -n "$TOP_CHANGES" && "$TOP_CHANGES" != "null" ]]; then
+          DESCRIPTION="${DESCRIPTION} Top changes: ${TOP_CHANGES}."
+        fi
+        
+        DESCRIPTION="${DESCRIPTION} ${TOTAL_RESOURCES} resources analyzed."
+        
+        echo "Generated description: $DESCRIPTION"
+        echo "Signal severity: $SEVERITY"
+        
+        # Submit signal using overmind CLI or API
+        if command -v overmind &> /dev/null; then
+          echo "Submitting signal via Overmind CLI..."
+          
+          # Use CLI with ticket link if this is a PR
+          TICKET_LINK="${{ github.event.pull_request.html_url }}"
+          if [[ -n "$TICKET_LINK" ]]; then
+            overmind changes submit-signal \
+              --title "Cost" \
+              --description "$DESCRIPTION" \
+              --value "$SEVERITY" \
+              --ticket-link "$TICKET_LINK"
+          else
+            overmind changes submit-signal \
+              --title "Cost" \
+              --description "$DESCRIPTION" \
+              --value "$SEVERITY"
+          fi
+          
+          if [[ $? -eq 0 ]]; then
+            echo "✅ Signal submitted successfully via CLI!"
+            echo "signal-submitted=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Failed to submit signal via CLI"
+            echo "signal-submitted=false" >> $GITHUB_OUTPUT
+            if [[ "${{ inputs.fail-on-threshold }}" == "true" ]]; then
+              exit 1
+            fi
+          fi
+        else
+          echo "Submitting signal via API..."
+          
+          # Create signal JSON
+          cat > /tmp/cost-signal.json << EOF
+        {
+          "title": "Cost",
+          "description": "$DESCRIPTION", 
+          "value": $SEVERITY
+        }
+        EOF
+          
+          response=$(curl -s -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OVERMIND_API_KEY" \
+            -H "User-Agent: overmind-cost-signals-action/1.0" \
+            --data @/tmp/cost-signal.json \
+            "${{ inputs.overmind-url }}/v1/signals" \
+            -o /tmp/overmind-response.json)
+          
+          http_code="${response: -3}"
+          
+          if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
+            echo "✅ Signal submitted successfully via API!"
+            echo "signal-submitted=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Failed to submit signal via API (HTTP $http_code)"
+            if [[ -f "/tmp/overmind-response.json" ]]; then
+              echo "API response:"
+              cat /tmp/overmind-response.json
+            fi
+            echo "signal-submitted=false" >> $GITHUB_OUTPUT
+            
+            if [[ "${{ inputs.fail-on-threshold }}" == "true" ]]; then
+              exit 1
+            fi
+          fi
+        fi
+        
+        # Set outputs
+        echo "cost-change=$DELTA" >> $GITHUB_OUTPUT
+        echo "cost-percentage=$PERCENTAGE" >> $GITHUB_OUTPUT
+        echo "signal-value=$SEVERITY" >> $GITHUB_OUTPUT
+        echo "total-resources=$TOTAL_RESOURCES" >> $GITHUB_OUTPUT
+        
+        # Generate GitHub summary
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        ## 📊 Cost Analysis Summary
+        
+        **Cost Signal Submitted**
+        
+        ${DESCRIPTION}
+        
+        **Signal Value:** ${SEVERITY} (Range: -4 to +3)
+        
+        ---
+        *Signal submitted to Overmind at $(date)*
+        EOF
+      env:
+        OVERMIND_API_KEY: ${{ inputs.overmind-api-key }}
+        INFRACOST_API_KEY: ${{ inputs.infracost-api-key }}
