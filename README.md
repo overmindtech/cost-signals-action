@@ -13,19 +13,6 @@
   <p>
     Analyze infrastructure cost changes with Infracost and submit them as Overmind Custom Signals for enhanced financial risk visibility - all in parallel with your terraform analysis.
   </p>
-</div>enter">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://assets-global.website-files.com/6241e92445c21f9c1245a940/6582c2b96d741b023f1afabf_ov-lite-icon-p-500.png">
-    <img alt="Overmind" src="https://assets-global.website-files.com/6241e92445c21f9c1245a940/6582c2b96d741b023f1afabf_ov-lite-icon-p-500.png" width="260">
-  </picture>
-# Overmind Cost Signals Action
-  <p>
-    <a href="https://overmind.tech">https://overmind.tech</a>
-  </p>
-  <p>
-    Analyze infrastructure cost changes with Infracost and submit them as Overmind Custom Signals for enhanced financial risk visibility - all in parallel with your terraform analysis.
-  </p>
-</div>
 <br/>
 <p align="center">
   <a href="https://discord.com/invite/5UKsqAkPWG" rel="nofollow"><img src="https://img.shields.io/discord/1088753599951151154?label=Discord&logo=discord&logoColor=white" alt="Discord Server"></a>
