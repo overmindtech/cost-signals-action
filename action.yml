@@ -348,31 +348,51 @@ runs:
         if command -v overmind &> /dev/null; then
           echo "Submitting signal via Overmind CLI..."
           
+          # Set authentication for Overmind CLI (force non-interactive)
+          export OVM_API_KEY="${{ inputs.overmind-api-key }}"
+          export OVERMIND_API_KEY="${{ inputs.overmind-api-key }}"
+          
+          # Verify API key is set
+          if [ -z "$OVM_API_KEY" ]; then
+            echo "ERROR: Overmind API key is not set"
+            exit 1
+          fi
+          
+          echo "API key is set and ready for authentication"
+          
           # Use CLI with ticket link if this is a PR
           TICKET_LINK="${{ github.event.pull_request.html_url }}"
           if [[ -n "$TICKET_LINK" ]]; then
-            overmind changes submit-signal \
+            echo "Submitting signal with ticket link: $TICKET_LINK"
+            timeout 30 overmind changes submit-signal \
               --title "Cost" \
               --description "$DESCRIPTION" \
               --value "$SEVERITY" \
-              --ticket-link "$TICKET_LINK"
+              --ticket-link "$TICKET_LINK" || {
+              echo "WARNING: Failed to submit signal via CLI (timeout or auth issue)"
+              echo "signal-submitted=false" >> $GITHUB_OUTPUT
+              if [[ "${{ inputs.fail-on-threshold }}" == "true" ]]; then
+                exit 1
+              fi
+              exit 0
+            }
           else
-            overmind changes submit-signal \
+            echo "Submitting signal without ticket link"
+            timeout 30 overmind changes submit-signal \
               --title "Cost" \
               --description "$DESCRIPTION" \
-              --value "$SEVERITY"
+              --value "$SEVERITY" || {
+              echo "WARNING: Failed to submit signal via CLI (timeout or auth issue)"
+              echo "signal-submitted=false" >> $GITHUB_OUTPUT
+              if [[ "${{ inputs.fail-on-threshold }}" == "true" ]]; then
+                exit 1
+              fi
+              exit 0
+            }
           fi
           
-          if [[ $? -eq 0 ]]; then
-            echo "✅ Signal submitted successfully via CLI!"
-            echo "signal-submitted=true" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Failed to submit signal via CLI"
-            echo "signal-submitted=false" >> $GITHUB_OUTPUT
-            if [[ "${{ inputs.fail-on-threshold }}" == "true" ]]; then
-              exit 1
-            fi
-          fi
+          echo "✅ Signal submitted successfully via CLI!"
+          echo "signal-submitted=true" >> $GITHUB_OUTPUT
         else
           echo "Submitting signal via API..."
           
