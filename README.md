@@ -21,6 +21,7 @@
   <a href="https://www.youtube.com/watch?v=cr4Q0oLaANk&t=7s">Watch a demo</a> | <a href="https://docs.overmind.tech/getting-started/overview">Documentation</a> | <a href="https://app.overmind.tech/api/auth/signup">Sign up</a> | <a href="https://www.linkedin.com/company/overmindtech/">Follow us</a>
 </p>
 <br/>
+
 ## Quick Start
 
 Add cost analysis to your Overmind workflow in under 2 minutes. This action runs Infracost on your terraform plans and submits cost changes as "Cost" signals, giving you immediate financial context while terraform analysis runs in parallel.
