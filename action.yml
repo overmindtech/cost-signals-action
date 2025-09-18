@@ -440,20 +440,6 @@ runs:
         echo "cost-percentage=$PERCENTAGE" >> $GITHUB_OUTPUT
         echo "signal-value=$SEVERITY" >> $GITHUB_OUTPUT
         echo "total-resources=$TOTAL_RESOURCES" >> $GITHUB_OUTPUT
-        
-        # Generate GitHub summary
-        cat >> $GITHUB_STEP_SUMMARY << EOF
-        ## 📊 Cost Analysis Summary
-        
-        **Cost Signal Submitted**
-        
-        ${DESCRIPTION}
-        
-        **Signal Value:** ${SEVERITY} (Range: -4 to +3)
-        
-        ---
-        *Signal submitted to Overmind at $(date)*
-        EOF
       env:
         OVERMIND_API_KEY: ${{ inputs.overmind-api-key }}
         INFRACOST_API_KEY: ${{ inputs.infracost-api-key }}
