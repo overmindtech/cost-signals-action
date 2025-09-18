@@ -3,7 +3,22 @@
     <source media="(prefers-color-scheme: dark)" srcset="https://assets-global.website-files.com/6241e92445c21f9c1245a940/6582c2b96d741b023f1afabf_ov-lite-icon-p-500.png">
     <img alt="Overmind" src="https://assets-global.website-files.com/6241e92445c21f9c1245a940/6582c2b96d741b023f1afabf_ov-lite-icon-p-500.png" width="260">
   </picture>
-Overmind Cost Signals Action
+
+  # Overmind Cost Signals Action
+
+  <p>
+    <a href="https://overmind.tech">https://overmind.tech</a>
+  </p>
+  
+  <p>
+    Analyze infrastructure cost changes with Infracost and submit them as Overmind Custom Signals for enhanced financial risk visibility - all in parallel with your terraform analysis.
+  </p>
+</div>enter">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://assets-global.website-files.com/6241e92445c21f9c1245a940/6582c2b96d741b023f1afabf_ov-lite-icon-p-500.png">
+    <img alt="Overmind" src="https://assets-global.website-files.com/6241e92445c21f9c1245a940/6582c2b96d741b023f1afabf_ov-lite-icon-p-500.png" width="260">
+  </picture>
+# Overmind Cost Signals Action
   <p>
     <a href="https://overmind.tech">https://overmind.tech</a>
   </p>
@@ -34,10 +49,10 @@ Add cost analysis to your Overmind workflow in under 2 minutes. This action runs
 
 This GitHub Action enhances your Overmind change analysis by:
 
-- **Analyzing cost impact** immediately when a PR is created/updated
-- **Submitting cost changes** as Custom Signals to Overmind (in parallel with terraform analysis)
-- **Providing instant financial context** on infrastructure changes (typically within 30 seconds)
-- **Enriching the PR comment** with cost data alongside blast radius analysis
+1. **Analyzing cost impact** immediately when a PR is created/updated
+2. **Submitting cost changes** as Custom Signals to Overmind (in parallel with terraform analysis)
+3. **Providing instant financial context** on infrastructure changes (typically within 30 seconds)
+4. **Enriching the PR comment** with cost data alongside blast radius analysis
 
 ## How Cost Signals Work
 
@@ -60,7 +75,7 @@ Unlike policy violations which are binary (pass/fail), cost signals provide quan
 
 ### Basic Setup
 
-Add the action to your workflow (e.g., `.github/workflows/terraform.yml`):
+1. **Add the action to your workflow** (`.github/workflows/terraform.yml`):
 
 ```yaml
 name: Terraform Analysis with Cost
@@ -102,7 +117,7 @@ jobs:
           terraform-plan-json: ./tfplan.json
 ```
 
-**Watch the magic happen!** Cost changes will appear in your PR comment within seconds.
+2. **Push changes and watch the magic happen!** Cost changes will appear in your PR comment within seconds.
 
 ## Configuration
 
@@ -250,4 +265,4 @@ By using this action, you agree to the [GitHub Terms of Service](https://docs.gi
 
 ---
 
-Made with ❤️ by [Overmind](https://overmind.tech)
+*Made with care by [Overmind](https://overmind.tech)*
