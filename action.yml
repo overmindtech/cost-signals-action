@@ -134,58 +134,63 @@ runs:
       run: |
         echo "Installing Infracost..."
         
-        # Detect OS and architecture
-        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-        ARCH=$(uname -m)
-        
-        case $OS in
-          linux*) OS="linux" ;;
-          darwin*) OS="darwin" ;;
-          *) echo "Unsupported OS: $OS"; exit 1 ;;
-        esac
-        
-        case $ARCH in
-          x86_64|amd64) ARCH="amd64" ;;
-          arm64|aarch64) ARCH="arm64" ;;
-          *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-        esac
-        
         # Check if already installed
         if command -v infracost &> /dev/null; then
           echo "Infracost already installed: $(infracost --version)"
         else
-          # Install Infracost
+          # Use the official Infracost installation method
+          echo "Downloading and installing Infracost..."
+          
           if [[ "${{ inputs.infracost-version }}" == "latest" ]]; then
-            VERSION="v0.10.42"
+            # Use official installation script for latest version
+            curl -fsSL https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh | sh
           else
+            # Manual installation for specific version
             VERSION="${{ inputs.infracost-version }}"
-          fi
-          
-          DOWNLOAD_URL="https://github.com/infracost/infracost/releases/download/${VERSION}/infracost-${OS}-${ARCH}.tar.gz"
-          
-          echo "Downloading Infracost from: $DOWNLOAD_URL"
-          
-          # Create a temporary directory for extraction
-          TEMP_DIR=$(mktemp -d)
-          curl -fsSL "$DOWNLOAD_URL" | tar -xz -C "$TEMP_DIR"
-          
-          # Find and install binary
-          if [[ -f "$TEMP_DIR/infracost" ]]; then
-            sudo mv "$TEMP_DIR/infracost" /usr/local/bin/infracost
-          else
-            BINARY_PATH=$(find "$TEMP_DIR" -name "infracost" -type f 2>/dev/null | head -1)
-            if [[ -n "$BINARY_PATH" ]]; then
-              sudo mv "$BINARY_PATH" /usr/local/bin/infracost
+            
+            # Detect OS and architecture
+            OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+            ARCH=$(uname -m)
+            
+            case $OS in
+              linux*) OS="linux" ;;
+              darwin*) OS="darwin" ;;
+              *) echo "Unsupported OS: $OS"; exit 1 ;;
+            esac
+            
+            case $ARCH in
+              x86_64|amd64) ARCH="amd64" ;;
+              arm64|aarch64) ARCH="arm64" ;;
+              *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+            esac
+            
+            DOWNLOAD_URL="https://github.com/infracost/infracost/releases/download/${VERSION}/infracost-${OS}-${ARCH}.tar.gz"
+            
+            echo "Downloading Infracost from: $DOWNLOAD_URL"
+            
+            # Create a temporary directory for extraction
+            TEMP_DIR=$(mktemp -d)
+            
+            # Download and extract
+            if curl -fsSL "$DOWNLOAD_URL" | tar -xz -C "$TEMP_DIR"; then
+              # The binary should be directly in the archive
+              if [[ -f "$TEMP_DIR/infracost" ]]; then
+                sudo mv "$TEMP_DIR/infracost" /usr/local/bin/infracost
+                chmod +x /usr/local/bin/infracost
+              else
+                echo "Error: infracost binary not found in archive"
+                ls -la "$TEMP_DIR"
+                exit 1
+              fi
             else
-              echo "Error: Could not find infracost binary in downloaded archive"
+              echo "Error: Failed to download or extract archive"
               exit 1
             fi
+            
+            # Clean up
+            rm -rf "$TEMP_DIR"
           fi
           
-          # Clean up
-          rm -rf "$TEMP_DIR"
-          
-          chmod +x /usr/local/bin/infracost
           echo "Infracost installed: $(infracost --version)"
         fi
         
