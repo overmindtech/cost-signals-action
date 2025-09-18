@@ -164,15 +164,26 @@ runs:
           DOWNLOAD_URL="https://github.com/infracost/infracost/releases/download/${VERSION}/infracost-${OS}-${ARCH}.tar.gz"
           
           echo "Downloading Infracost from: $DOWNLOAD_URL"
-          curl -fsSL "$DOWNLOAD_URL" | tar -xz -C /tmp
+          
+          # Create a temporary directory for extraction
+          TEMP_DIR=$(mktemp -d)
+          curl -fsSL "$DOWNLOAD_URL" | tar -xz -C "$TEMP_DIR"
           
           # Find and install binary
-          if [[ -f "/tmp/infracost" ]]; then
-            sudo mv /tmp/infracost /usr/local/bin/infracost
+          if [[ -f "$TEMP_DIR/infracost" ]]; then
+            sudo mv "$TEMP_DIR/infracost" /usr/local/bin/infracost
           else
-            BINARY_PATH=$(find /tmp -name "infracost" -type f | head -1)
-            sudo mv "$BINARY_PATH" /usr/local/bin/infracost
+            BINARY_PATH=$(find "$TEMP_DIR" -name "infracost" -type f 2>/dev/null | head -1)
+            if [[ -n "$BINARY_PATH" ]]; then
+              sudo mv "$BINARY_PATH" /usr/local/bin/infracost
+            else
+              echo "Error: Could not find infracost binary in downloaded archive"
+              exit 1
+            fi
           fi
+          
+          # Clean up
+          rm -rf "$TEMP_DIR"
           
           chmod +x /usr/local/bin/infracost
           echo "Infracost installed: $(infracost --version)"
@@ -221,11 +232,18 @@ runs:
           DOWNLOAD_URL="https://github.com/overmindtech/cli/releases/download/${VERSION}/overmind_${VERSION#v}_${OS}_${ARCH}.tar.gz"
           
           echo "Downloading Overmind CLI from: $DOWNLOAD_URL"
-          curl -fsSL "$DOWNLOAD_URL" | tar -xz -C /tmp
+          
+          # Create a temporary directory for extraction  
+          TEMP_DIR=$(mktemp -d)
+          curl -fsSL "$DOWNLOAD_URL" | tar -xz -C "$TEMP_DIR"
           
           # Install binary
-          sudo mv /tmp/overmind /usr/local/bin/overmind
+          sudo mv "$TEMP_DIR/overmind" /usr/local/bin/overmind
           chmod +x /usr/local/bin/overmind
+          
+          # Clean up
+          rm -rf "$TEMP_DIR"
+          
           echo "Overmind CLI installed: $(overmind version 2>/dev/null || echo 'installed')"
         fi
 
