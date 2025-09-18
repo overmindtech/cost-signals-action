@@ -370,6 +370,7 @@ runs:
               --title "Cost" \
               --description "$DESCRIPTION" \
               --value "$SEVERITY" \
+              --category "Cost" \
               --ticket-link "$TICKET_LINK" || {
               echo "WARNING: Failed to submit signal via CLI (timeout or auth issue)"
               echo "signal-submitted=false" >> $GITHUB_OUTPUT
@@ -383,7 +384,8 @@ runs:
             timeout 30 overmind changes submit-signal \
               --title "Cost" \
               --description "$DESCRIPTION" \
-              --value "$SEVERITY" || {
+              --value "$SEVERITY" \
+              --category "Cost" || {
               echo "WARNING: Failed to submit signal via CLI (timeout or auth issue)"
               echo "signal-submitted=false" >> $GITHUB_OUTPUT
               if [[ "${{ inputs.fail-on-threshold }}" == "true" ]]; then
@@ -403,7 +405,8 @@ runs:
         {
           "title": "Cost",
           "description": "$DESCRIPTION", 
-          "value": $SEVERITY
+          "value": $SEVERITY,
+          "category": "Cost"
         }
         EOF
           
