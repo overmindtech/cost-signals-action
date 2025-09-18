@@ -313,19 +313,21 @@ runs:
           fi
         fi
         
-        # Build description with top changes
+        # Build description with top changes (formatted to 2 decimal places)
         TOP_CHANGES=$(jq -r '[.projects[].breakdown.resources[] | 
           select(.costDiff.monthly != null and .costDiff.monthly != 0) | 
           {name: .name, delta: .costDiff.monthly}] | 
           sort_by(-.delta) | 
           .[0:3] | 
-          map("\(.name) ($\(.delta))") | 
+          map("\(.name) ($\(.delta | tonumber | . * 100 | round / 100))") | 
           join(", ")' cost.json)
         
         TOTAL_RESOURCES=$(jq -r '.summary.totalDetectedResources // 0' cost.json)
         
-        # Format delta without negative sign for display
-        DISPLAY_DELTA=$(echo "$DELTA" | tr -d '-')
+        # Format values to 2 decimal places
+        DISPLAY_DELTA=$(printf "%.2f" $(echo "$DELTA" | tr -d '-'))
+        CURRENT_FORMATTED=$(printf "%.2f" "$CURRENT")
+        PREVIOUS_FORMATTED=$(printf "%.2f" "$PREVIOUS")
         
         if (( $(echo "$DELTA > 0" | bc -l) )); then
           DIRECTION="increases"
@@ -333,7 +335,7 @@ runs:
           DIRECTION="decreases"
         fi
         
-        DESCRIPTION="Monthly cost ${DIRECTION} by \$${DISPLAY_DELTA} (${PERCENTAGE}%) from \$${PREVIOUS} to \$${CURRENT} ${{ inputs.currency }}."
+        DESCRIPTION="Monthly cost ${DIRECTION} by \$${DISPLAY_DELTA} (${PERCENTAGE}%) from \$${PREVIOUS_FORMATTED} to \$${CURRENT_FORMATTED} ${{ inputs.currency }}."
         
         if [[ -n "$TOP_CHANGES" && "$TOP_CHANGES" != "null" ]]; then
           DESCRIPTION="${DESCRIPTION} Top changes: ${TOP_CHANGES}."
