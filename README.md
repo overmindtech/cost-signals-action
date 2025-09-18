@@ -6,6 +6,13 @@
     <p>
     <a href="https://overmind.tech">https://overmind.tech</a>
   </p>
+  <p align="center">
+  <a href="https://discord.com/invite/5UKsqAkPWG" rel="nofollow"><img src="https://img.shields.io/discord/1088753599951151154?label=Discord&logo=discord&logoColor=white" alt="Discord Server"></a>
+</p>
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=cr4Q0oLaANk&t=7s">Watch a demo</a> | <a href="https://docs.overmind.tech/getting-started/overview">Documentation</a> | <a href="https://app.overmind.tech/api/auth/signup">Sign up</a> | <a href="https://www.linkedin.com/company/overmindtech/">Follow us</a>
+</p>
+<br/>
 
 # Overmind Cost Signals Action
   
@@ -16,13 +23,6 @@
   <p>
     Analyze infrastructure cost changes with Infracost and submit them as Overmind Custom Signals for enhanced financial risk visibility - all in parallel with your terraform analysis.
   </p>
-<br/>
-<p align="center">
-  <a href="https://discord.com/invite/5UKsqAkPWG" rel="nofollow"><img src="https://img.shields.io/discord/1088753599951151154?label=Discord&logo=discord&logoColor=white" alt="Discord Server"></a>
-</p>
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=cr4Q0oLaANk&t=7s">Watch a demo</a> | <a href="https://docs.overmind.tech/getting-started/overview">Documentation</a> | <a href="https://app.overmind.tech/api/auth/signup">Sign up</a> | <a href="https://www.linkedin.com/company/overmindtech/">Follow us</a>
-</p>
 <br/>
 
 ## Quick Start
